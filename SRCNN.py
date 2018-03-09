@@ -2,6 +2,7 @@
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import hsv_to_rgb
 import os
 import sys
 
@@ -12,13 +13,14 @@ import psnr
 
 
 BIT_DEPTH = 8
-RESIZE_K = 2
+RESIZE_K = 5
 LEARNING_RATE = 0.001
 
 files = ['img/'+str for str in sorted(os.listdir('img/'))]
 
 img_raw = [tf.read_file(file) for file in files]
-img_decoded = [tf.cast(tf.image.decode_png(i),tf.float32)/(2**BIT_DEPTH) for i in img_raw]
+#img_decoded = [tf.image.rgb_to_hsv(tf.cast(tf.image.decode_jpeg(i),tf.float32)/(2**BIT_DEPTH)) for i in img_raw]
+img_decoded = [tf.cast(tf.image.decode_jpeg(i),tf.float32)/(2**BIT_DEPTH) for i in img_raw]
 
 img_resized_X = [
     tf.image.resize_images(
@@ -27,9 +29,9 @@ img_resized_X = [
     )
     for i in img_decoded]
 
-l1 = Layers.patch_extraction(x=img_resized_X,channels=4)
-l2 = Layers.none_linear_mapping(x=l1.out,channels=4)
-l3 = Layers.reconstruction(x=l2.out,channels=4)
+l1 = Layers.patch_extraction(x=img_resized_X,channels=3)
+l2 = Layers.none_linear_mapping(x=l1.out,channels=3)
+l3 = Layers.reconstruction(x=l2.out,channels=3)
 
 cost = tf.reduce_mean(tf.squared_difference(l3.out, img_decoded))
 optimizer = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE)
@@ -40,23 +42,36 @@ init = tf.global_variables_initializer()
 sess = tf.Session()
 sess.run(init)
 
+print(sess.run(tf.reduce_mean(tf.squared_difference(img_resized_X, img_decoded))))
+
+plt.ion()
+fig=plt.figure(figsize=(15,5))
+p1 = fig.add_subplot(1,3,1)
+p2 = fig.add_subplot(1,3,2)
+p3 = fig.add_subplot(1,3,3)
+p1.imshow(sess.run(img_decoded)[0],interpolation='none')
+p3.imshow(sess.run(img_resized_X)[0],interpolation='none')
 i = 0
 while True:
-    if i%100 == 0:
+    if i%500 == 0:
+        c = sess.run(cost)
+        if c < 0.0001:
+            break
         print(sess.run(cost))
-        i1 = np.array(sess.run(img_decoded))
-        i2 = np.array(sess.run(l3.out))
-        #print(i2)
-        fig=plt.figure()
-        fig.add_subplot(2,1,1)
-        plt.imshow(np.reshape(i1[0,:,:,0:3],[92,100,3]))
-        fig.add_subplot(2,1,2)
-        plt.imshow(np.reshape(i2[0,:,:,0:3],[92,100,3]))
-        plt.pause(0.5)
-        plt.close()
+        i2 = sess.run(l3.out)
+        '''
+        p1.imshow(hsv_to_rgb(i1[0]),interpolation='none')
+        p2.imshow(hsv_to_rgb(i2[0]),interpolation='none')
+        p3.imshow(hsv_to_rgb(i3[0]),interpolation='none')
+        '''
+        #p1.imshow(i1[0],interpolation='none')
+        p2.imshow(i2[0],interpolation='none')
+        #p3.imshow(i3[0],interpolation='none')
+        fig.canvas.draw()
+        plt.pause(0.0001)
     i = i+1
     sess.run(train_op)
-
+np.save('weights', [sess.run(l1.W),sess.run(l1.B),sess.run(l2.W),sess.run(l2.B),sess.run(l3.W),sess.run(l3.B)])
 
 
 
