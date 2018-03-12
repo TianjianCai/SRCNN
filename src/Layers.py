@@ -1,5 +1,4 @@
 import tensorflow as tf
-import numpy as np
 
 class patch_extraction(object):
     def __init__(self,x,kernel_size=10,strides=1,channels_in=3,channels_out=3,W=None,B=None,keep_prob=1):

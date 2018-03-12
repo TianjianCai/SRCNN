@@ -9,13 +9,12 @@ import sys
 #import from src
 sys.path.append('src')
 import Layers
-import psnr
 
 
 BIT_DEPTH = 8
 RESIZE_K = 2
 LEARNING_RATE = 0.0001
-DROPOUT = 0.9
+DROPOUT = 0.75
 BATCH_SIZE = 6
 
 files = ['img/'+str for str in sorted(os.listdir('img/'))]
