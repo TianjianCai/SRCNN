@@ -52,14 +52,14 @@ try:
     B2 = tf.Variable(B2)
     W3 = tf.Variable(W3)
     B3 = tf.Variable(B3)
-    l1 = Layers.patch_extraction(x=img_resized_X,channels_in=3,channels_out=64,keep_prob=keep_prob,W=W1,B=B1)
-    l2 = Layers.none_linear_mapping(x=l1.out,channels_in=64,channels_out=64,keep_prob=keep_prob,W=W2,B=B2)
+    l1 = Layers.patch_extraction(x=img_resized_X,channels_in=3,channels_out=128,keep_prob=keep_prob,W=W1,B=B1)
+    l2 = Layers.none_linear_mapping(x=l1.out,channels_in=128,channels_out=64,keep_prob=keep_prob,W=W2,B=B2)
     l3 = Layers.reconstruction(x=l2.out,channels_in=64,channels_out=3,W=W3,B=B3)
     print('weight loaded successfully')
 except:
     l1 = Layers.patch_extraction(x=img_resized_X,channels_in=3,channels_out=64,keep_prob=keep_prob)
-    l2 = Layers.none_linear_mapping(x=l1.out,channels_in=64,channels_out=64,keep_prob=keep_prob)
-    l3 = Layers.reconstruction(x=l2.out,channels_in=64,channels_out=3)
+    l2 = Layers.none_linear_mapping(x=l1.out,channels_in=64,channels_out=32,keep_prob=keep_prob)
+    l3 = Layers.reconstruction(x=l2.out,channels_in=32,channels_out=3)
     print('No weight file found,use random weight')
 
 cost = tf.reduce_mean(tf.squared_difference(l3.out, img_decoded))

@@ -13,7 +13,7 @@ class patch_extraction(object):
             self.B = tf.Variable(tf.convert_to_tensor(B))
         y = tf.nn.conv2d(x, self.W, strides=[1, strides, strides, 1], padding='SAME')
         y = tf.nn.bias_add(y, self.B)
-        y = tf.nn.elu(y)
+        y = tf.nn.sigmoid(y)
         self.out = tf.nn.dropout(y,keep_prob)
         
 class none_linear_mapping(object):
@@ -29,7 +29,7 @@ class none_linear_mapping(object):
             self.B = B
         y = tf.nn.conv2d(x, self.W, strides=[1, strides, strides, 1], padding='SAME')
         y = tf.nn.bias_add(y, self.B)
-        y = tf.nn.elu(y)
+        y = tf.nn.sigmoid(y)
         self.out = tf.nn.dropout(y,keep_prob)
 
 class reconstruction(object):
