@@ -11,7 +11,7 @@ import Layers
 
 
 BIT_DEPTH = 8
-RESIZE_K = 4
+RESIZE_K = 2
 DROPOUT = 0.75
 BATCH_SIZE = 5
 
@@ -41,9 +41,9 @@ img_resized_X = tf.map_fn(fn=resize_func, elems=img_decoded,dtype=tf.float32)
 
 W1,B1,W2,B2,W3,B3 = np.load('weights.npy')
 
-l1 = Layers.patch_extraction(x=img_resized_X,channels_in=3,channels_out=128,keep_prob=keep_prob,W=W1,B=B1)
-l2 = Layers.none_linear_mapping(x=l1.out,channels_in=128,channels_out=64,keep_prob=keep_prob,W=W2,B=B2)
-l3 = Layers.reconstruction(x=l2.out,channels_in=64,channels_out=3,W=W3,B=B3)
+l1 = Layers.patch_extraction(x=img_resized_X,channels_in=3,channels_out=100,keep_prob=keep_prob,W=W1,B=B1)
+l2 = Layers.none_linear_mapping(x=l1.out,channels_in=100,channels_out=49,keep_prob=keep_prob,W=W2,B=B2)
+l3 = Layers.reconstruction(x=l2.out,channels_in=49,channels_out=3,W=W3,B=B3)
 
 
 init = tf.global_variables_initializer()
