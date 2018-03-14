@@ -14,7 +14,7 @@ BIT_DEPTH = 8
 RESIZE_K = 2
 LEARNING_RATE = 1e-3
 DROPOUT = 0.75
-BATCH_SIZE = 6
+BATCH_SIZE = 5
 
 files = ['img/'+str for str in sorted(os.listdir('img/'))]
 file_length = np.shape(files)
@@ -52,28 +52,17 @@ try:
     B2 = tf.Variable(B2)
     W3 = tf.Variable(W3)
     B3 = tf.Variable(B3)
-    l1 = Layers.patch_extraction(x=img_resized_X,channels_in=3,channels_out=100,keep_prob=keep_prob,W=W1,B=B1,is_training=is_training)
-    l2 = Layers.none_linear_mapping(x=l1.out,channels_in=100,channels_out=49,keep_prob=keep_prob,W=W2,B=B2,is_training=is_training)
-    l3 = Layers.reconstruction(x=l2.out,channels_in=49,channels_out=3,W=W3,B=B3,is_training=is_training)
+    l1 = Layers.patch_extraction(x=img_resized_X,channels_in=3,channels_out=64,keep_prob=keep_prob,W=W1,B=B1,is_training=is_training)
+    l2 = Layers.none_linear_mapping(x=l1.out,channels_in=64,channels_out=32,keep_prob=keep_prob,W=W2,B=B2,is_training=is_training)
+    l3 = Layers.reconstruction(x=l2.out,channels_in=32,channels_out=3,W=W3,B=B3,is_training=is_training)
     print('weight loaded successfully')
 except:
-    l1 = Layers.patch_extraction(x=img_resized_X,channels_in=3,channels_out=100,keep_prob=keep_prob,is_training=is_training)
-    l2 = Layers.none_linear_mapping(x=l1.out,channels_in=100,channels_out=49,keep_prob=keep_prob,is_training=is_training)
-    l3 = Layers.reconstruction(x=l2.out,channels_in=49,channels_out=3,is_training=is_training)
+    l1 = Layers.patch_extraction(x=img_resized_X,channels_in=3,channels_out=64,keep_prob=keep_prob,is_training=is_training)
+    l2 = Layers.none_linear_mapping(x=l1.out,channels_in=64,channels_out=32,keep_prob=keep_prob,is_training=is_training)
+    l3 = Layers.reconstruction(x=l2.out,channels_in=32,channels_out=3,is_training=is_training)
     print('No weight file found,use random weight')
 
 cost = tf.reduce_mean(tf.squared_difference(l3.out, img_decoded))
-
-cost_ce = tf.abs(tf.reduce_mean(
-    tf.reduce_sum(
-        tf.add(
-            tf.multiply(img_decoded,tf.log(tf.clip_by_value(l3.out,1e-10,1.0))),
-            tf.multiply(tf.log(tf.clip_by_value(tf.subtract(1.,img_decoded),1e-10,1.0)),tf.subtract(1.,l3.out))
-            ),
-        axis=1,
-        keepdims=True
-        )
-    ))
 
 optimizer = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE)
 train_op = optimizer.minimize(loss=cost,var_list=[l1.W,l1.B,l2.W,l2.B,l3.W,l3.B])
@@ -111,16 +100,9 @@ while True:
             #break
         print('iteration ' + repr(i) + ', cost: ' + repr(c))
         i2 = sess.run(l3.out,{keep_prob:1,batch_start:1,batch_size:1,is_training:False})
-        '''
-        p1.imshow(hsv_to_rgb(i1[0]),interpolation='none')
-        p2.imshow(hsv_to_rgb(i2[0]),interpolation='none')
-        p3.imshow(hsv_to_rgb(i3[0]),interpolation='none')
-        '''
-        #p1.imshow(i1[0],interpolation='none')
         p2.imshow(i2[0],interpolation='none')
-        #p3.imshow(i3[0],interpolation='none')
         fig.canvas.draw()
-        plt.pause(0.00001)
+        plt.pause(0.1)
     i = i+1
     sess.run(train_op,{keep_prob:DROPOUT,batch_start:file_start,batch_size:file_size,is_training:True})
     file_start = file_start+BATCH_SIZE
