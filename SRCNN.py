@@ -11,9 +11,10 @@ import Layers
 
 BIT_DEPTH = 8
 RESIZE_K = 4
-LEARNING_RATE = 1e-3
+LEARNING_RATE = 1e-5
 DROPOUT = 0.75
-BATCH_SIZE = 5
+BATCH_SIZE = 1
+K = 1
 
 files = ['img/' + str for str in sorted(os.listdir('img/'))]
 file_length = np.shape(files)
@@ -72,9 +73,10 @@ except:
     print('No weight file found,use random weight')
 
 cost = tf.reduce_mean(tf.squared_difference(l3.out, img_decoded))
+cost_weight = cost + K*l1.weight_cost + K*l2.weight_cost + K*l3.weight_cost
 
 optimizer = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE)
-train_op = optimizer.minimize(loss=cost, var_list=[l1.W, l1.B, l2.W, l2.B, l3.W, l3.B])
+train_op = optimizer.minimize(loss=cost_weight, var_list=[l1.W, l1.B, l2.W, l2.B, l3.W, l3.B])
 
 init = tf.global_variables_initializer()
 
@@ -109,6 +111,8 @@ while True:
             # break
         print('iteration ' + repr(i) + ', cost: ' + repr(c))
         i2 = sess.run(l3.out, {keep_prob: 1, batch_start: 1, batch_size: 1, is_training: False})
+        print(sess.run(l3.weight_cost_0, {keep_prob: 1, batch_start: 1, batch_size: 1, is_training: False}))
+        print(sess.run(l3.weight_cost_1, {keep_prob: 1, batch_start: 1, batch_size: 1, is_training: False}))
         p2.imshow(i2[0], interpolation='none')
         fig.canvas.draw()
         plt.pause(0.1)
