@@ -13,6 +13,8 @@ class patch_extraction(object):
             self.B = tf.Variable(tf.convert_to_tensor(B))
         y = tf.nn.conv2d(x, self.W, strides=[1, strides, strides, 1], padding='SAME')
         y = tf.nn.bias_add(y, self.B)
+        all_zeros = tf.zeros(tf.shape(y))
+        self.weight_cost = tf.reduce_mean(tf.where(tf.greater(all_zeros, y), all_zeros, y))
         #y = tf.contrib.layers.batch_norm(y,center=False,scale=True,is_training=is_training,updates_collections=None)
         y = tf.nn.sigmoid(y)
         self.out = tf.nn.dropout(y,keep_prob)
