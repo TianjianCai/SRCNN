@@ -11,10 +11,11 @@ import Layers
 
 BIT_DEPTH = 8
 RESIZE_K = 4
-LEARNING_RATE = 1e-5
+LEARNING_RATE = 1e-4
 DROPOUT = 0.75
 BATCH_SIZE = 1
-K = 1
+K = 100
+SHOW_PLT = True
 
 files = ['img/' + str for str in sorted(os.listdir('img/'))]
 file_length = np.shape(files)
@@ -89,13 +90,15 @@ sess.run(init)
 
 print(sess.run(tf.reduce_mean(tf.squared_difference(img_resized_X, img_decoded)), {batch_start: 1, batch_size: 1}))
 
-plt.ion()
-fig = plt.figure(figsize=(15, 5))
-p1 = fig.add_subplot(1, 3, 1)
-p2 = fig.add_subplot(1, 3, 2)
-p3 = fig.add_subplot(1, 3, 3)
-p1.imshow(sess.run(img_decoded, {batch_start: 1, batch_size: 1})[0], interpolation='none')
-p3.imshow(sess.run(img_resized_X, {batch_start: 1, batch_size: 1})[0], interpolation='none')
+if SHOW_PLT is True:
+    plt.ion()
+    fig = plt.figure(figsize=(15, 5))
+    p1 = fig.add_subplot(1, 3, 1)
+    p2 = fig.add_subplot(1, 3, 2)
+    p3 = fig.add_subplot(1, 3, 3)
+    p1.imshow(sess.run(img_decoded, {batch_start: 1, batch_size: 1})[0], interpolation='none')
+    p3.imshow(sess.run(img_resized_X, {batch_start: 1, batch_size: 1})[0], interpolation='none')
+
 i = 0
 file_start = 0
 file_size = BATCH_SIZE
@@ -113,9 +116,10 @@ while True:
         i2 = sess.run(l3.out, {keep_prob: 1, batch_start: 1, batch_size: 1, is_training: False})
         print(sess.run(l3.weight_cost_0, {keep_prob: 1, batch_start: 1, batch_size: 1, is_training: False}))
         print(sess.run(l3.weight_cost_1, {keep_prob: 1, batch_start: 1, batch_size: 1, is_training: False}))
-        p2.imshow(i2[0], interpolation='none')
-        fig.canvas.draw()
-        plt.pause(0.1)
+        if SHOW_PLT is True:
+            p2.imshow(i2[0], interpolation='none')
+            fig.canvas.draw()
+            plt.pause(0.1)
     i = i + 1
     sess.run(train_op, {keep_prob: DROPOUT, batch_start: file_start, batch_size: file_size, is_training: True})
     file_start = file_start + BATCH_SIZE
