@@ -13,9 +13,9 @@ BIT_DEPTH = 8
 RESIZE_K = 4
 LEARNING_RATE = 1e-4
 DROPOUT = 0.75
-BATCH_SIZE = 1
+BATCH_SIZE = 4
 K = 100
-SHOW_PLT = True
+SHOW_PLT = False
 
 files = ['img/' + str for str in sorted(os.listdir('img/'))]
 file_length = np.shape(files)
@@ -73,11 +73,11 @@ except:
     l3 = Layers.reconstruction(x=l2.out, channels_in=32, channels_out=3, is_training=is_training)
     print('No weight file found,use random weight')
 
-cost = tf.reduce_mean(tf.squared_difference(l3.out, img_decoded))
+cost = tf.reduce_mean(tf.square(l3.out - img_decoded))
 cost_weight = cost + K*l1.weight_cost + K*l2.weight_cost + K*l3.weight_cost
 
 optimizer = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE)
-train_op = optimizer.minimize(loss=cost_weight, var_list=[l1.W, l1.B, l2.W, l2.B, l3.W, l3.B])
+train_op = optimizer.minimize(loss=cost, var_list=[l1.W, l1.B, l2.W, l2.B, l3.W, l3.B])
 
 init = tf.global_variables_initializer()
 
@@ -88,7 +88,7 @@ config.gpu_options.allow_growth = True
 sess = tf.Session(config=config)
 sess.run(init)
 
-print(sess.run(tf.reduce_mean(tf.squared_difference(img_resized_X, img_decoded)), {batch_start: 1, batch_size: 1}))
+print(sess.run(tf.reduce_mean(tf.square(img_resized_X - img_decoded)), {batch_start: 1, batch_size: 1}))
 
 if SHOW_PLT is True:
     plt.ion()
@@ -113,9 +113,16 @@ while True:
             pass
             # break
         print('iteration ' + repr(i) + ', cost: ' + repr(c))
+        with open('mse.csv','a+') as f:
+            content = repr(i) + ',' + repr(c) + '\n'
+            f.write(content)
+            f.close()
         i2 = sess.run(l3.out, {keep_prob: 1, batch_start: 1, batch_size: 1, is_training: False})
-        print(sess.run(l3.weight_cost_0, {keep_prob: 1, batch_start: 1, batch_size: 1, is_training: False}))
-        print(sess.run(l3.weight_cost_1, {keep_prob: 1, batch_start: 1, batch_size: 1, is_training: False}))
+        '''
+        print(sess.run(l1.out, {keep_prob: 1, batch_start: 1, batch_size: 1, is_training: False}))
+        print(sess.run(l2.out, {keep_prob: 1, batch_start: 1, batch_size: 1, is_training: False}))
+        print(sess.run(l3.out, {keep_prob: 1, batch_start: 1, batch_size: 1, is_training: False}))
+        '''
         if SHOW_PLT is True:
             p2.imshow(i2[0], interpolation='none')
             fig.canvas.draw()

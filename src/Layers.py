@@ -14,11 +14,11 @@ class patch_extraction(object):
         y = tf.nn.conv2d(x, self.W, strides=[1, strides, strides, 1], padding='SAME')
         y = tf.nn.bias_add(y, self.B)
         all_zeros = tf.zeros(tf.shape(y))
-        self.weight_cost_0 = 0 - tf.reduce_sum(tf.where(tf.greater(all_zeros, y), y, all_zeros))
+        self.weight_cost_0 = 0 - tf.reduce_mean(tf.where(tf.greater(all_zeros, y), y, all_zeros))
         self.weight_cost_1 = tf.reduce_mean(tf.where(tf.less(all_zeros, y - 1), y - 1, all_zeros))
-        self.weight_cost = self.weight_cost_0  # + self.weight_cost_1
+        self.weight_cost = self.weight_cost_0 + self.weight_cost_1
         #y = tf.contrib.layers.batch_norm(y,center=False,scale=True,is_training=is_training,updates_collections=None)
-        y = tf.nn.relu(y)
+        y = tf.nn.sigmoid(y)
         self.out = tf.nn.dropout(y,keep_prob)
         
 class none_linear_mapping(object):
@@ -35,11 +35,11 @@ class none_linear_mapping(object):
         y = tf.nn.conv2d(x, self.W, strides=[1, strides, strides, 1], padding='SAME')
         y = tf.nn.bias_add(y, self.B)
         all_zeros = tf.zeros(tf.shape(y))
-        self.weight_cost_0 = 0 - tf.reduce_sum(tf.where(tf.greater(all_zeros, y), y, all_zeros))
+        self.weight_cost_0 = 0 - tf.reduce_mean(tf.where(tf.greater(all_zeros, y), y, all_zeros))
         self.weight_cost_1 = tf.reduce_mean(tf.where(tf.less(all_zeros, y - 1), y - 1, all_zeros))
-        self.weight_cost = self.weight_cost_0  #+ self.weight_cost_1
+        self.weight_cost = self.weight_cost_0 + self.weight_cost_1
         #y = tf.contrib.layers.batch_norm(y,center=True,scale=True,is_training=is_training,updates_collections=None)
-        y = tf.nn.relu(y)
+        y = tf.nn.sigmoid(y)
         self.out = tf.nn.dropout(y,keep_prob)
 
 class reconstruction(object):
@@ -56,9 +56,9 @@ class reconstruction(object):
         y = tf.nn.conv2d(x, self.W, strides=[1, strides, strides, 1], padding='SAME')
         y = tf.nn.bias_add(y, self.B)
         all_zeros = tf.zeros(tf.shape(y))
-        self.weight_cost_0 = 0 - tf.reduce_sum(tf.where(tf.greater(all_zeros, y), y, all_zeros))
+        self.weight_cost_0 = 0 - tf.reduce_mean(tf.where(tf.greater(all_zeros, y), y, all_zeros))
         self.weight_cost_1 = tf.reduce_mean(tf.where(tf.less(all_zeros, y - 1), y - 1, all_zeros))
         self.weight_cost = self.weight_cost_0 + self.weight_cost_1
         #y = tf.contrib.layers.batch_norm(y,center=False,scale=True,is_training=is_training,updates_collections=None)
-        y = tf.nn.relu(y)
+        y = tf.nn.sigmoid(y)
         self.out = y
