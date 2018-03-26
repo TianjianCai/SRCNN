@@ -77,7 +77,7 @@ cost = tf.reduce_mean(tf.square(l3.out - img_decoded))
 cost_weight = cost + K*l1.weight_cost + K*l2.weight_cost + K*l3.weight_cost
 
 optimizer = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE)
-train_op = optimizer.minimize(loss=cost, var_list=[l1.W, l1.B, l2.W, l2.B, l3.W, l3.B])
+train_op = optimizer.minimize(loss=cost_weight, var_list=[l1.W, l1.B, l2.W, l2.B, l3.W, l3.B])
 
 init = tf.global_variables_initializer()
 

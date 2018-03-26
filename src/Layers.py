@@ -18,7 +18,7 @@ class patch_extraction(object):
         self.weight_cost_1 = tf.reduce_mean(tf.where(tf.less(all_zeros, y - 1), y - 1, all_zeros))
         self.weight_cost = self.weight_cost_0 + self.weight_cost_1
         #y = tf.contrib.layers.batch_norm(y,center=False,scale=True,is_training=is_training,updates_collections=None)
-        y = tf.nn.sigmoid(y)
+        y = tf.nn.relu(y)
         self.out = tf.nn.dropout(y,keep_prob)
         
 class none_linear_mapping(object):
@@ -39,7 +39,7 @@ class none_linear_mapping(object):
         self.weight_cost_1 = tf.reduce_mean(tf.where(tf.less(all_zeros, y - 1), y - 1, all_zeros))
         self.weight_cost = self.weight_cost_0 + self.weight_cost_1
         #y = tf.contrib.layers.batch_norm(y,center=True,scale=True,is_training=is_training,updates_collections=None)
-        y = tf.nn.sigmoid(y)
+        y = tf.nn.relu(y)
         self.out = tf.nn.dropout(y,keep_prob)
 
 class reconstruction(object):
@@ -60,5 +60,5 @@ class reconstruction(object):
         self.weight_cost_1 = tf.reduce_mean(tf.where(tf.less(all_zeros, y - 1), y - 1, all_zeros))
         self.weight_cost = self.weight_cost_0 + self.weight_cost_1
         #y = tf.contrib.layers.batch_norm(y,center=False,scale=True,is_training=is_training,updates_collections=None)
-        y = tf.nn.sigmoid(y)
+        y = tf.nn.relu(y)
         self.out = y
