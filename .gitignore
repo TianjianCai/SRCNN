@@ -4,3 +4,4 @@
 *.jpg
 .idea/*
 *.csv
+log/*

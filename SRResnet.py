@@ -28,15 +28,15 @@ class ResUnit(object):
             self.b2 = tf.Variable(b2)
             self.b3 = tf.Variable(b3)
         # bn1 = tf.contrib.layers.batch_norm(x, center=True, scale=False, is_training=training, updates_collections=None)
-        bn1 = self.batch_norm(x)
+        bn1 = tf.map_fn(self.batch_norm, x)
         act1 = tf.nn.dropout(tf.nn.tanh(bn1), keep_prob)
         layer1 = self.conv2d(act1, self.w1, self.b1, strides)
         #bn2 = tf.contrib.layers.batch_norm(layer1, center=True, scale=False, is_training=training, updates_collections=None)
-        bn2 = self.batch_norm(layer1)
+        bn2 = tf.map_fn(self.batch_norm, layer1)
         act2 = tf.nn.dropout(tf.nn.tanh(bn2), keep_prob)
         layer2 = self.conv2d(act2, self.w2, self.b2, strides)
         #bn3 = tf.contrib.layers.batch_norm(layer2, center=True, scale=False, is_training=training, updates_collections=None)
-        bn3 = self.batch_norm(layer2)
+        bn3 = tf.map_fn(self.batch_norm, layer2)
         act3 = tf.nn.dropout(tf.nn.tanh(bn3), keep_prob)
         layer3 = self.conv2d(act3, self.w3, self.b3, strides)
         addition = tf.add(x, layer3)
@@ -48,14 +48,14 @@ class ResUnit(object):
         return y
 
     def batch_norm(self, x):
-        return tf.subtract(tf.divide(x, tf.reduce_mean(x)), tf.multiply(tf.reduce_mean(x), 0.5))
+        return tf.divide(tf.subtract(x, tf.multiply(tf.reduce_mean(x), 0.5)), tf.reduce_mean(x))
 
 
 BIT_DEPTH = 8
 RESIZE_K = 4
 LEARNING_RATE = 1e-4
 DROPOUT = 0.75
-BATCH_SIZE = 1
+BATCH_SIZE = 4
 K = 100
 SHOW_PLT = False
 
@@ -67,6 +67,9 @@ keep_prob = tf.placeholder(tf.float32)
 batch_start = tf.placeholder(tf.int32)
 batch_size = tf.placeholder(tf.int32)
 is_training = tf.placeholder(tf.bool)
+
+iteration_count = tf.Variable(0, dtype=tf.int64)
+iteration_add = tf.assign(iteration_count,iteration_count+1000)
 
 img_raw = tf.stack([tf.read_file(file) for file in files])
 
@@ -90,20 +93,9 @@ def resize_func(i):
 
 img_resized_X = tf.map_fn(fn=resize_func, elems=img_decoded, dtype=tf.float32)
 
-'''
-Loading weight file
-'''
-try:
-    w1, w2, w3 = np.load('weights_res.npy')
-    res1 = ResUnit(x=img_resized_X, w1=w1[0], w2=w1[1], w3=w1[2], b1=w1[3], b2=w1[4], b3=w1[5])
-    res2 = ResUnit(x=res1.UnitOut, w1=w2[0], w2=w2[1], w3=w2[2], b1=w2[3], b2=w2[4], b3=w2[5])
-    res3 = ResUnit(x=res2.UnitOut, w1=w3[0], w2=w3[1], w3=w3[2], b1=w3[3], b2=w3[4], b3=w3[5])
-    print('weight loaded successfully')
-except:
-    res1 = ResUnit(x=img_resized_X)
-    res2 = ResUnit(x=res1.UnitOut)
-    res3 = ResUnit(x=res2.UnitOut)
-    print('No weight file found,use random weight')
+res1 = ResUnit(x=img_resized_X)
+res2 = ResUnit(x=res1.UnitOut)
+res3 = ResUnit(x=res2.UnitOut)
 
 cost = tf.reduce_mean(tf.square(res3.UnitOut - img_decoded))
 
@@ -118,6 +110,14 @@ config = tf.ConfigProto(
 config.gpu_options.allow_growth = True
 sess = tf.Session(config=config)
 sess.run(init)
+
+saver = tf.train.Saver()
+
+try:
+    saver.restore(sess,'C:\\Users\\CTJ\\Documents\\GitHub\\SRCNN\\log\\resnet.ckpt')
+    print('checkpoint loaded')
+except:
+    print('cannot load checkpoint')
 
 print(sess.run(tf.reduce_mean(tf.square(img_resized_X - img_decoded)), {batch_start: 1, batch_size: 1}))
 
@@ -136,14 +136,20 @@ file_size = BATCH_SIZE
 while True:
 
     if i % 1000 == 0:
+        saver.save(sess, 'C:\\Users\\CTJ\\Documents\\GitHub\\SRCNN\\log\\resnet.ckpt')
         c = sess.run(cost, {keep_prob: 1, batch_start: 1, batch_size: 1, is_training: False})
-        print('iteration ' + repr(i) + ', cost: ' + repr(c))
+        print('iteration ' + repr(sess.run(iteration_count)) + ', cost: ' + repr(c))
         i2 = sess.run(res3.UnitOut, {keep_prob: 1, batch_start: 1, batch_size: 1, is_training: False})
+        with open('mse.csv','a+') as f:
+            content = repr(sess.run(iteration_count)) + ',' + repr(c) + '\n'
+            f.write(content)
+            f.close()
         '''
         print(sess.run(l1.out, {keep_prob: 1, batch_start: 1, batch_size: 1, is_training: False}))
         print(sess.run(l2.out, {keep_prob: 1, batch_start: 1, batch_size: 1, is_training: False}))
         print(sess.run(l3.out, {keep_prob: 1, batch_start: 1, batch_size: 1, is_training: False}))
         '''
+        sess.run(iteration_add)
         if SHOW_PLT is True:
             p2.imshow(i2[0], interpolation='none')
             fig.canvas.draw()
