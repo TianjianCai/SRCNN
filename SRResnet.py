@@ -87,11 +87,13 @@ img_decoded = tf.map_fn(fn=decode_func, elems=img_raw_batch, dtype=tf.float32)
 
 def resize_func(i):
     small_img = tf.image.resize_images(i, [tf.shape(img_decoded)[1] // RESIZE_K, tf.shape(img_decoded)[2] // RESIZE_K])
-    large_img = tf.image.resize_images(small_img, [tf.shape(img_decoded)[1], tf.shape(img_decoded)[2]])
-    return large_img
+    return small_img
 
 
 img_resized_X = tf.map_fn(fn=resize_func, elems=img_decoded, dtype=tf.float32)
+img_resized_X = tf.reshape(img_resized_X,[-1,tf.shape(img_resized_X)[1],1,tf.shape(img_resized_X)[2],1,3])
+img_resized_X = tf.tile(img_resized_X,[1,1,RESIZE_K,1,RESIZE_K,1])
+img_resized_X = tf.reshape(img_resized_X,[-1,tf.shape(img_decoded)[1],tf.shape(img_decoded)[2],3])
 
 res1 = ResUnit(x=img_resized_X)
 res2 = ResUnit(x=res1.UnitOut)
@@ -151,7 +153,7 @@ while True:
         '''
         sess.run(iteration_add)
         if SHOW_PLT is True:
-            p2.imshow(i2[0], interpolation='none')
+            p2.imshow(np.clip(i2[0],0,1), interpolation='none')
             fig.canvas.draw()
             plt.pause(0.1)
     i = i + 1
