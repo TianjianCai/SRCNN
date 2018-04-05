@@ -40,6 +40,11 @@ class ResUnit(object):
         act3 = tf.nn.dropout(tf.nn.tanh(bn3), keep_prob)
         layer3 = self.conv2d(act3, self.w3, self.b3, strides)
         addition = tf.add(x, layer3)
+        self.addition = addition
+        all_zeros = tf.zeros(tf.shape(addition))
+        weight_cost_0 = 0 - tf.clip_by_value(tf.reduce_sum(tf.where(tf.greater(all_zeros, addition), addition, all_zeros)), -1e10, 0)
+        weight_cost_1 = tf.clip_by_value(tf.reduce_sum(tf.where(tf.less(all_zeros, addition - 1), addition - 1, all_zeros)), 0, 1e10)
+        self.weight_cost = weight_cost_0 + weight_cost_1
         self.UnitOut = addition
 
     def conv2d(self, x, w, b, strides):
@@ -48,16 +53,18 @@ class ResUnit(object):
         return y
 
     def batch_norm(self, x):
-        return tf.divide(tf.subtract(x, tf.multiply(tf.reduce_mean(x), 0.5)), tf.reduce_mean(x))
+        return tf.divide(tf.subtract(x,tf.reduce_mean(x)), tf.clip_by_value(tf.reduce_max(x)-tf.reduce_min(x), 1e-10, 1e10))
 
 
 BIT_DEPTH = 8
-RESIZE_K = 4
+RESIZE_K = 2
 LEARNING_RATE = 1e-4
 DROPOUT = 0.75
 BATCH_SIZE = 4
 K = 100
 SHOW_PLT = False
+RESNUM = 10
+ITERATION_NUM = 1000
 
 files = ['img/' + str for str in sorted(os.listdir('img/'))]
 file_length = np.shape(files)
@@ -69,7 +76,7 @@ batch_size = tf.placeholder(tf.int32)
 is_training = tf.placeholder(tf.bool)
 
 iteration_count = tf.Variable(0, dtype=tf.int64)
-iteration_add = tf.assign(iteration_count,iteration_count+1000)
+iteration_add = tf.assign(iteration_count,iteration_count+ITERATION_NUM)
 
 img_raw = tf.stack([tf.read_file(file) for file in files])
 
@@ -90,16 +97,29 @@ def resize_func(i):
     return small_img
 
 
+def resize_func2(i):
+    small_img = tf.image.resize_images(i, [tf.shape(img_decoded)[1] // RESIZE_K, tf.shape(img_decoded)[2] // RESIZE_K])
+    large_img = tf.image.resize_images(small_img, [tf.shape(img_decoded)[1], tf.shape(img_decoded)[2]])
+    return large_img
+
+
+img_resized_X2 = tf.map_fn(fn=resize_func2, elems=img_decoded, dtype=tf.float32)
+
 img_resized_X = tf.map_fn(fn=resize_func, elems=img_decoded, dtype=tf.float32)
 img_resized_X = tf.reshape(img_resized_X,[-1,tf.shape(img_resized_X)[1],1,tf.shape(img_resized_X)[2],1,3])
 img_resized_X = tf.tile(img_resized_X,[1,1,RESIZE_K,1,RESIZE_K,1])
 img_resized_X = tf.reshape(img_resized_X,[-1,tf.shape(img_decoded)[1],tf.shape(img_decoded)[2],3])
 
-res1 = ResUnit(x=img_resized_X)
-res2 = ResUnit(x=res1.UnitOut)
-res3 = ResUnit(x=res2.UnitOut)
 
-cost = tf.reduce_mean(tf.square(res3.UnitOut - img_decoded))
+reslist = []
+reslist.append(ResUnit(x=img_resized_X))
+cost = reslist[0].weight_cost
+for i in range(1, RESNUM):
+    reslist.append(ResUnit(x=reslist[i-1].UnitOut))
+    cost = tf.add(cost, reslist[i].weight_cost)
+resout = reslist[len(reslist)-1]
+
+cost = cost + tf.reduce_mean(tf.square(resout.UnitOut - img_decoded))
 
 optimizer = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE)
 train_op = optimizer.minimize(loss=cost)
@@ -121,6 +141,7 @@ try:
 except:
     print('cannot load checkpoint')
 
+print(sess.run(tf.reduce_mean(tf.square(img_resized_X2 - img_decoded)), {batch_start: 1, batch_size: 1}))
 print(sess.run(tf.reduce_mean(tf.square(img_resized_X - img_decoded)), {batch_start: 1, batch_size: 1}))
 
 if SHOW_PLT is True:
@@ -137,11 +158,13 @@ file_start = 0
 file_size = BATCH_SIZE
 while True:
 
-    if i % 1000 == 0:
+    if i % ITERATION_NUM == 0:
         saver.save(sess, 'C:\\Users\\CTJ\\Documents\\GitHub\\SRCNN\\log\\resnet.ckpt')
         c = sess.run(cost, {keep_prob: 1, batch_start: 1, batch_size: 1, is_training: False})
-        print('iteration ' + repr(sess.run(iteration_count)) + ', cost: ' + repr(c))
-        i2 = sess.run(res3.UnitOut, {keep_prob: 1, batch_start: 1, batch_size: 1, is_training: False})
+        c2 = sess.run(resout.weight_cost, {keep_prob: 1, batch_start: 1, batch_size: 1, is_training: False})
+        print('iteration ' + repr(sess.run(iteration_count)) + ', cost: ' + repr(c) + ', weight cost: ' + repr(c2))
+        i2 = sess.run(resout.UnitOut, {keep_prob: 1, batch_start: 1, batch_size: 1, is_training: False})
+        #print(sess.run(resout.addition[0], {keep_prob: 1, batch_start: 1, batch_size: 1, is_training: False}))
         with open('mse.csv','a+') as f:
             content = repr(sess.run(iteration_count)) + ',' + repr(c) + '\n'
             f.write(content)
